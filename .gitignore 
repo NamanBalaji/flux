@@ -1,0 +1,6 @@
+/cmd/*/config*.yml
+/cmd/*/*/config*.yml
+!/cmd/*/config.dist.yml
+
+/.idea
+/*.out
