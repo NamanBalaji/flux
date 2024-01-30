@@ -1,6 +1,9 @@
 package service
 
-import "github.com/NamanBalaji/flux/internal/broker/model"
+import (
+	"fmt"
+	"github.com/NamanBalaji/flux/internal/broker/model"
+)
 
 type Broker struct {
 	DefaultPartitions int
@@ -28,4 +31,22 @@ func (b *Broker) createTopic(name string) *model.Topic {
 	b.Topics[name] = topic
 
 	return topic
+}
+
+func (b *Broker) ReadMessage(topicName string, partitionIndex int, offset int) ([]model.Message, error) {
+	topic, exist := b.Topics[topicName]
+	if !exist {
+		return nil, fmt.Errorf("no topic called %s exists", topicName)
+	}
+
+	if partitionIndex >= len(topic.Partitions) {
+		return nil, fmt.Errorf("partition with index %d not found for topic %s", partitionIndex, topicName)
+	}
+
+	partition := topic.Partitions[partitionIndex]
+	if offset >= len(partition.Log) {
+		return nil, fmt.Errorf("offset %d out of range for partition %d in topic %s", offset, partitionIndex, topicName)
+	}
+
+	return partition.Log[offset:], nil
 }
