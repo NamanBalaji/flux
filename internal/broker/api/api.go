@@ -1,12 +1,14 @@
 package api
 
 import (
+	"github.com/NamanBalaji/flux/internal/broker/handler"
+	"github.com/NamanBalaji/flux/internal/broker/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter() *gin.Engine {
+func SetupRouter(broker *service.Broker) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/ping", func(c *gin.Context) {
@@ -14,6 +16,8 @@ func SetupRouter() *gin.Engine {
 			"message": "alive",
 		})
 	})
+
+	r.POST("/publish", handler.PublishMessageHandler(broker))
 
 	return r
 }

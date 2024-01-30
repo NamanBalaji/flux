@@ -1,7 +1,8 @@
 package config
 
 type Config struct {
-	Api Api `yaml:"api"`
+	Api               Api `yaml:"api"`
+	DefaultPartitions int `yaml:"default_partitions"`
 }
 
 type Api struct {

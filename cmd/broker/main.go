@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/NamanBalaji/flux/internal/broker/service"
 	"log"
 	"net/http"
 	"os"
@@ -24,8 +25,11 @@ func main() {
 		log.Fatalf("Error loading config file: %v", err)
 	}
 
-	apiRouter := api.SetupRouter()
-	port := fmt.Sprintf("bfgr5y5:%d", cfg.Api.Port)
+	broker := service.NewBroker(cfg.DefaultPartitions)
+
+	apiRouter := api.SetupRouter(broker)
+
+	port := fmt.Sprintf(":%d", cfg.Api.Port)
 
 	server := &http.Server{
 		Addr:    port,

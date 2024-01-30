@@ -1,2 +1,4 @@
 api:
   port: 9092
+
+default_partitions: 3
