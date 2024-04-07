@@ -1,4 +1,4 @@
-package model
+package message
 
 type Message struct {
 	Id      string `json:"id"`
@@ -10,11 +10,11 @@ type Message struct {
 type MessagesByTopic map[string][]Message
 
 func (m MessagesByTopic) AddMessage(topic string, message Message) {
-	message.Order = m.getLatestOrder()
+	message.Order = m.GetLatestOrder()
 	m[topic] = append(m[topic], message)
 }
 
-func (m MessagesByTopic) getLatestOrder() int64 {
+func (m MessagesByTopic) GetLatestOrder() int64 {
 	var max int64 = -1
 	for _, messages := range m {
 		for _, message := range messages {

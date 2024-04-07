@@ -1,4 +1,4 @@
-package model
+package topic
 
 type Topic struct {
 	Name string `json:"name"`

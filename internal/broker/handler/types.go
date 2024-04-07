@@ -5,3 +5,8 @@ type PublishMessageRequest struct {
 	Message string `json:"message"`
 	Topic   string `json:"topic"`
 }
+
+type RegisterSubscriberRequest struct {
+	Address string   `json:"address"`
+	Topics  []string `json:"topics"`
+}

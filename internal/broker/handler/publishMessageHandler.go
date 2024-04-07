@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"github.com/NamanBalaji/flux/internal/broker/service"
-	"github.com/NamanBalaji/flux/pkg/model"
+	"github.com/NamanBalaji/flux/pkg/message"
 	"github.com/gin-gonic/gin"
 	"io"
 	"log"
@@ -30,7 +30,7 @@ func PublishMessageHandler(broker *service.Broker) gin.HandlerFunc {
 		}
 
 		topic := broker.GetOrCreateTopic(body.Topic)
-		msg, err := broker.AddMessage(topic.Name, model.Message{
+		msg, err := broker.AddMessage(topic.Name, message.Message{
 			Id:      body.Id,
 			Topic:   body.Topic,
 			Payload: body.Message,
