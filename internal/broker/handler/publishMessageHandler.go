@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"github.com/NamanBalaji/flux/internal/broker/service"
+	"github.com/NamanBalaji/flux/pkg/model"
 	"github.com/gin-gonic/gin"
 	"io"
 	"log"
@@ -27,23 +28,24 @@ func PublishMessageHandler(broker *service.Broker) gin.HandlerFunc {
 
 			return
 		}
-
+		
 		topic := broker.GetOrCreateTopic(body.Topic)
-		partition, err := topic.AssignPartition(body.Key)
+		msg, err := broker.AddMessage(topic.Name, model.Message{
+			Id:      body.Id,
+			Topic:   body.Topic,
+			Payload: body.Message,
+		})
+
 		if err != nil {
-			log.Printf("error occured while assigning partition [ERROR]: %s", err)
+			log.Printf("error occured while writing the message to the topic [ERROR]: %s", err)
 			c.JSON(http.StatusBadRequest, err)
 
 			return
 		}
 
-		offset := partition.AppendMessageToPartition(body.Message, body.Key)
-
 		c.JSON(http.StatusOK, gin.H{
-			"key":     body.Key,
-			"message": body.Message,
-			"topic":   body.Topic,
-			"offset":  offset,
+			"topic":   topic.Name,
+			"message": *msg,
 		})
 	}
 }

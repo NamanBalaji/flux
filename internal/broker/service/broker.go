@@ -2,51 +2,55 @@ package service
 
 import (
 	"fmt"
-	"github.com/NamanBalaji/flux/internal/broker/model"
+	"github.com/NamanBalaji/flux/pkg/model"
 )
 
 type Broker struct {
-	DefaultPartitions int
-	Topics            map[string]*model.Topic
+	Topics   []model.Topic
+	Messages model.MessagesByTopic
+	// subscribers ?
+	// other brokers
 }
 
-func NewBroker(partitions int) *Broker {
+func NewBroker() *Broker {
+	topics := make([]model.Topic, 0)
+	messages := make(map[string][]model.Message)
+
 	return &Broker{
-		DefaultPartitions: partitions,
-		Topics:            make(map[string]*model.Topic),
+		Topics:   topics,
+		Messages: messages,
 	}
 }
 
-func (b *Broker) GetOrCreateTopic(name string) *model.Topic {
-	if topic, ok := b.Topics[name]; ok {
+func (b *Broker) GetOrCreateTopic(topicName string) *model.Topic {
+	topic := b.findTopic(topicName)
+	if topic != nil {
 		return topic
 	}
 
-	return b.createTopic(name)
-}
-
-func (b *Broker) createTopic(name string) *model.Topic {
-	partitions := make([]model.Partition, b.DefaultPartitions)
-	topic := &model.Topic{Partitions: partitions}
-	b.Topics[name] = topic
+	topic = model.CreateTopic(topicName)
+	b.Topics = append(b.Topics, *topic)
 
 	return topic
 }
 
-func (b *Broker) ReadMessage(topicName string, partitionIndex int, offset int) ([]model.Message, error) {
-	topic, exist := b.Topics[topicName]
-	if !exist {
-		return nil, fmt.Errorf("no topic called %s exists", topicName)
+func (b *Broker) findTopic(topicName string) *model.Topic {
+	for _, topic := range b.Topics {
+		if topic.Name == topicName {
+			return &topic
+		}
 	}
 
-	if partitionIndex >= len(topic.Partitions) {
-		return nil, fmt.Errorf("partition with index %d not found for topic %s", partitionIndex, topicName)
+	return nil
+}
+
+func (b *Broker) AddMessage(topicName string, message model.Message) (*model.Message, error) {
+	topic := b.findTopic(topicName)
+	if topic == nil {
+		return nil, fmt.Errorf("no topic with name %s exists", topicName)
 	}
 
-	partition := topic.Partitions[partitionIndex]
-	if offset >= len(partition.Log) {
-		return nil, fmt.Errorf("offset %d out of range for partition %d in topic %s", offset, partitionIndex, topicName)
-	}
+	b.Messages.AddMessage(topicName, message)
 
-	return partition.Log[offset:], nil
+	return &message, nil
 }
