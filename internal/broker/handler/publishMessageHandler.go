@@ -28,7 +28,7 @@ func PublishMessageHandler(broker *service.Broker) gin.HandlerFunc {
 
 			return
 		}
-		
+
 		topic := broker.GetOrCreateTopic(body.Topic)
 		msg, err := broker.AddMessage(topic.Name, model.Message{
 			Id:      body.Id,
@@ -38,7 +38,7 @@ func PublishMessageHandler(broker *service.Broker) gin.HandlerFunc {
 
 		if err != nil {
 			log.Printf("error occured while writing the message to the topic [ERROR]: %s", err)
-			c.JSON(http.StatusBadRequest, err)
+			c.JSON(http.StatusInternalServerError, err)
 
 			return
 		}

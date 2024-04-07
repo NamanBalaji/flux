@@ -25,7 +25,7 @@ func main() {
 		log.Fatalf("Error loading config file: %v", err)
 	}
 
-	broker := service.NewBroker(cfg.DefaultPartitions)
+	broker := service.NewBroker()
 
 	apiRouter := api.SetupRouter(broker)
 
