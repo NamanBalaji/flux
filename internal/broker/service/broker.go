@@ -5,65 +5,125 @@ import (
 	"github.com/NamanBalaji/flux/pkg/message"
 	"github.com/NamanBalaji/flux/pkg/subscriber"
 	topickPkg "github.com/NamanBalaji/flux/pkg/topic"
+	"sync"
 )
 
 type Broker struct {
-	Topics      []topickPkg.Topic
-	Messages    message.MessagesByTopic
+	mu          sync.Mutex
+	Messages    message.Messages
+	Topics      topickPkg.Topics
 	Subscribers subscriber.SubscribersByTopic
 	// other brokers
 }
 
 func NewBroker() *Broker {
-	topics := make([]topickPkg.Topic, 0)
-	messages := make(map[string][]message.Message)
 
 	return &Broker{
-		Topics:   topics,
-		Messages: messages,
+		Messages:    make(message.Messages),
+		Topics:      topickPkg.CreateTopics(),
+		Subscribers: make(subscriber.SubscribersByTopic),
 	}
 }
 
-func (b *Broker) GetOrCreateTopic(topicName string) *topickPkg.Topic {
-	topic := b.FindTopic(topicName)
-	if topic != nil {
-		return topic
+func (b *Broker) PublishMessage(topic string, msg message.Message) bool {
+	b.mu.Lock()
+	// Store message
+	msg.Order = b.Messages.GetLatestOrder() + 1
+	b.Messages.AddMessage(msg)
+
+	msgChan, ok := b.Topics[topic]
+	if !ok {
+		msgChan = make(chan message.Message, 100)
+		b.Topics[topic] = msgChan
+	}
+	b.mu.Unlock()
+
+	if !ok {
+		go b.manageTopic(topic, msgChan)
 	}
 
-	topic = topickPkg.CreateTopic(topicName)
-	b.Topics = append(b.Topics, *topic)
-
-	return topic
+	select {
+	case msgChan <- msg:
+		return true
+	default:
+		return false
+	}
 }
 
-func (b *Broker) FindTopic(topicName string) *topickPkg.Topic {
-	for _, topic := range b.Topics {
-		if topic.Name == topicName {
-			return &topic
+func (b *Broker) manageTopic(topic string, msgChan chan message.Message) {
+	for msg := range msgChan {
+		b.deliverMessageToSubscribers(topic, msg)
+	}
+}
+
+func (b *Broker) deliverMessageToSubscribers(topic string, msg message.Message) {
+	b.mu.Lock()
+	subscribers, ok := b.Subscribers[topic]
+	if !ok {
+		b.mu.Unlock()
+
+		return
+	}
+
+	// Make a copy to safely iterate outside the lock
+	subsCopy := make([]subscriber.Subscriber, len(subscribers))
+	for _, sub := range subscribers {
+		subsCopy = append(subsCopy, *sub)
+	}
+	b.mu.Unlock()
+
+	for _, sub := range subsCopy {
+		if msg.Order <= sub.StartAt {
+			continue
+		}
+		select {
+		case sub.MessageChan <- msg:
+			// log that the message was enqueued successfully
+		default:
+			// handle error by implementing backpressure
+		}
+	}
+}
+
+func (b *Broker) ValidateTopics(topics []string) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	for _, topic := range topics {
+		_, ok := b.Topics[topic]
+		if !ok {
+			return fmt.Errorf("topic %s does not exist", topic)
 		}
 	}
 
 	return nil
 }
 
-func (b *Broker) AddMessage(topicName string, message message.Message) (*message.Message, error) {
-	topic := b.FindTopic(topicName)
-	if topic == nil {
-		return nil, fmt.Errorf("no topic with name %s exists", topicName)
-	}
+func (b *Broker) Subscribe(topic string, address string) {
+	b.mu.Lock()
+	order := b.Messages.GetLatestOrder()
+	b.mu.Unlock()
 
-	b.Messages.AddMessage(topicName, message)
+	sub := subscriber.NewSubscriber(address, order)
+	sub.MessageChan = make(chan message.Message, 10)
 
-	return &message, nil
+	b.mu.Lock()
+	b.Subscribers.AddSubscriber(topic, sub)
+	b.mu.Unlock()
+
+	go b.processMessage(sub)
+
 }
 
-func (b *Broker) AddSubscriber(topicName string, subscriber subscriber.Subscriber) (*subscriber.Subscriber, error) {
-	topic := b.FindTopic(topicName)
-	if topic == nil {
-		return nil, fmt.Errorf("no topic with name %s exists", topicName)
+func (b *Broker) processMessage(subscriber *subscriber.Subscriber) {
+	if subscriber == nil {
+		return
 	}
 
-	b.Subscribers.AddSubscriber(topicName, subscriber)
-
-	return &subscriber, nil
+	for msg := range subscriber.MessageChan {
+		err := subscriber.PushMessage(msg)
+		if err == nil {
+			subscriber.StartAt = msg.Order
+		}
+	}
 }

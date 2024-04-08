@@ -1,11 +1,9 @@
 package topic
 
-type Topic struct {
-	Name string `json:"name"`
-}
+import "github.com/NamanBalaji/flux/pkg/message"
 
-func CreateTopic(name string) *Topic {
-	return &Topic{
-		Name: name,
-	}
+type Topics map[string]chan message.Message
+
+func CreateTopics() Topics {
+	return make(map[string]chan message.Message)
 }

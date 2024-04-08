@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/NamanBalaji/flux/internal/broker/service"
-	"github.com/NamanBalaji/flux/pkg/subscriber"
 	"github.com/gin-gonic/gin"
 	"io"
 	"log"
@@ -30,25 +29,19 @@ func RegisterSubscriberHandler(broker *service.Broker) gin.HandlerFunc {
 			return
 		}
 
-		for _, topic := range body.Topics {
-			t := broker.FindTopic(topic)
-			if t == nil {
-				log.Printf("invalid topic [%s]", topic)
-				c.JSON(http.StatusBadRequest, fmt.Errorf("invalid topic [%s]", topic))
-			}
+		// add address validation ?
+
+		// if topics absent return error
+		err = broker.ValidateTopics(body.Topics)
+		if err != nil {
+			log.Printf("topics not valid: %s", err)
+
+			c.JSON(http.StatusBadRequest, fmt.Errorf("topics not valid: %s", err))
 		}
 
-		latestOrder := broker.Messages.GetLatestOrder()
 		// create new subscriber for each topic
 		for _, topic := range body.Topics {
-			sub := subscriber.NewSubscriber(body.Address, latestOrder)
-			_, err := broker.AddSubscriber(topic, *sub)
-			if err != nil {
-				log.Printf("error occured while regestering the subscriber to the topic [ERROR]: %s", err)
-				c.JSON(http.StatusInternalServerError, err)
-
-				return
-			}
+			broker.Subscribe(topic, body.Address)
 		}
 
 		c.JSON(http.StatusOK, gin.H{

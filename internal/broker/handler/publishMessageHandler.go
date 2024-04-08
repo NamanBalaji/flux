@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/NamanBalaji/flux/internal/broker/service"
 	"github.com/NamanBalaji/flux/pkg/message"
 	"github.com/gin-gonic/gin"
@@ -29,23 +30,19 @@ func PublishMessageHandler(broker *service.Broker) gin.HandlerFunc {
 			return
 		}
 
-		topic := broker.GetOrCreateTopic(body.Topic)
-		msg, err := broker.AddMessage(topic.Name, message.Message{
+		processed := broker.PublishMessage(body.Topic, message.Message{
 			Id:      body.Id,
-			Topic:   body.Topic,
 			Payload: body.Message,
 		})
-
-		if err != nil {
-			log.Printf("error occured while writing the message to the topic [ERROR]: %s", err)
-			c.JSON(http.StatusInternalServerError, err)
+		if !processed {
+			log.Print("error occurred while writing the message to the topic [ERROR]: server too busy")
+			c.JSON(http.StatusInternalServerError, fmt.Errorf("error occurred while writing the message to the topic [ERROR]: server too busy"))
 
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"topic":   topic.Name,
-			"message": *msg,
+			"message": fmt.Sprintf("message published to topic %s", body.Topic),
 		})
 	}
 }
