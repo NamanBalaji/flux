@@ -41,9 +41,6 @@ func main() {
 
 	serverErrChan := make(chan struct{})
 
-	// go routines for sending messages to the subscribers
-	// go routines for purging data that is read by all consumers
-
 	go func() {
 		log.Printf("starting broken on port %s", port)
 		err := server.ListenAndServe()
@@ -52,6 +49,9 @@ func main() {
 			close(serverErrChan)
 		}
 	}()
+
+	// subscriber cleanup go routine
+	// message cleanup go routine
 
 	select {
 	case <-stopChan:

@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func RegisterSubscriberHandler(broker *service.Broker) gin.HandlerFunc {
+func UnsubscribeHandler(broker *service.Broker) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		jsonData, err := io.ReadAll(c.Request.Body)
 		if err != nil {
@@ -20,7 +20,7 @@ func RegisterSubscriberHandler(broker *service.Broker) gin.HandlerFunc {
 			return
 		}
 
-		var body RegisterSubscriberRequest
+		var body UnsubscribeRequest
 		err = json.Unmarshal(jsonData, &body)
 		if err != nil {
 			log.Printf("invalid body format [ERROR]: %s", err)
@@ -28,8 +28,6 @@ func RegisterSubscriberHandler(broker *service.Broker) gin.HandlerFunc {
 
 			return
 		}
-
-		// add address validation ?
 
 		// if topics absent return error
 		err = broker.ValidateTopics(body.Topics)
@@ -39,13 +37,12 @@ func RegisterSubscriberHandler(broker *service.Broker) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, fmt.Errorf("topics not valid: %s", err))
 		}
 
-		// create new subscriber for each topic
 		for _, topic := range body.Topics {
-			broker.Subscribe(topic, body.Address, body.ReadOld)
+			broker.UnSubscribe(topic, body.Address)
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"message": "subscriber registered successfully",
+			"message": "unsubscribed successfully",
 			"topics":  body.Topics,
 		})
 	}

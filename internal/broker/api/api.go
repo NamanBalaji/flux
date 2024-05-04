@@ -19,6 +19,7 @@ func SetupRouter(broker *service.Broker) *gin.Engine {
 
 	r.POST("/publish", handler.PublishMessageHandler(broker))
 	r.POST("/subscribe", handler.RegisterSubscriberHandler(broker))
+	r.POST("/unsubscribe", handler.UnsubscribeHandler(broker))
 
 	return r
 }

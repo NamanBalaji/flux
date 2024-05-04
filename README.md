@@ -2,10 +2,11 @@
 Flux is a high-performance, fault-tolerant distributed event streaming platform, featuring scalable topic-based messaging, and robust replication to ensure data consistency and availability.
 
 ## Todo
--[ ] Ordering checks
+-[ ] implement deduplication
 -[ ] implement context and error handling
--[ ] remove topic check when subscribing
--[ ] message cleanup
+-[ ] message cleanup on ACK
+-[ ] clean up un active subscribers
+-[ ] add logging
 
 ## Design
 
@@ -18,7 +19,7 @@ Flux is a high-performance, fault-tolerant distributed event streaming platform,
 
 #### Message Duplication and Ordering:
 
-- Messages are structured like <message, topic, uuid>. The leader assigns a unique incremental timestamp (ts) to each message as it's received to ensure order.
+- Messages are structured like <message, topic, uuid>.
 - Each message produced by producers is associated with a unique id decided by producer (uuid), which is used to prevent duplication: producers can retry sending a same message if they do not hear a response for some while and the receivers remember each message received with the uuid, and if duplicate messages are received, simple acknowledge it without appending it to its log.
 - The max_in_flight configuration remains, allowing producers to specify how many messages can be sent asynchronously.
 
@@ -33,7 +34,7 @@ Flux is a high-performance, fault-tolerant distributed event streaming platform,
 #### Consumer Registration and Message Delivery:
 
 - Consumers register themselves with the broker (leader) when they start up and specify the topics they're interested in.
-- New consumers receive only new messages produced after their registration. Brokers manage a registry of consumer offsets for each topic.
+- New consumers can receive only new messages or old messages and then new messages produced after their registration.
 - We provide a semantics that the consumer receives the messages of a topic in a strictly identical order as in the brokers. So the broker will advance the offset only when a consumer acknowledges a message.
 
 ### Brokers and Raft
