@@ -109,7 +109,7 @@ func (s *Subscriber) pushMessage(ctx context.Context, cfg config.Config, msg *me
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		log.Printf("Sending message with id %d to subscriber[Address: %s] subscribed to topic %s \n", msg.Id, s.Addr, topicName)
+		log.Printf("Sending message with id %s to subscriber[Address: %s] subscribed to topic %s \n", msg.Id, s.Addr, topicName)
 		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
