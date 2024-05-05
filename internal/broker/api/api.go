@@ -1,12 +1,13 @@
 package api
 
 import (
-	"github.com/NamanBalaji/flux/internal/broker/handler"
-	"github.com/NamanBalaji/flux/internal/broker/service"
-	"github.com/NamanBalaji/flux/pkg/config"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/NamanBalaji/flux/internal/broker/handler"
+	"github.com/NamanBalaji/flux/internal/broker/service"
+	"github.com/NamanBalaji/flux/pkg/config"
 )
 
 func SetupRouter(cfg config.Config, broker *service.Broker) *gin.Engine {

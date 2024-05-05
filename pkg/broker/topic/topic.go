@@ -3,11 +3,12 @@ package topic
 import (
 	"context"
 	"errors"
+	"sync"
+
 	"github.com/NamanBalaji/flux/pkg/broker/subscriber"
 	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/message"
 	"github.com/NamanBalaji/flux/pkg/queue"
-	"sync"
 )
 
 type Topic struct {
@@ -75,22 +76,31 @@ func (t *Topic) deliverMessageToSubscribers(msg *message.Message) {
 }
 
 func (t *Topic) Subscribe(ctx context.Context, cfg config.Config, address string, readOld bool) {
-	ctx, cancel := context.WithCancel(ctx)
-
 	t.lock.Lock()
-	// if old subscriber trying to join back
+	defer t.lock.Unlock()
+
+	// Check if the subscriber already exists and reactivate them
 	for _, sub := range t.Subscribers {
 		if sub.Addr == address {
-			sub.IsActive = true
-			sub.CancelFunc = cancel
-			t.lock.Unlock()
-			go sub.HandleQueue(ctx, cfg, t.Name)
+			if !sub.IsActive {
+				sub.IsActive = true
+				sub.CancelFunc()
+
+				newCtx, cancel := context.WithCancel(ctx)
+				sub.CancelFunc = cancel
+
+				go sub.HandleQueue(newCtx, cfg, t.Name)
+			}
 
 			return
 		}
 	}
 
-	sub := subscriber.NewSubscriber(ctx, address)
+	// Creating new subscriber if it does not exist
+	newCtx, cancel := context.WithCancel(ctx)
+	sub := subscriber.NewSubscriber(newCtx, address)
+	sub.CancelFunc = cancel
+
 	if readOld {
 		totalMessages := t.MessageQueue.Len()
 		for i := 0; i < totalMessages; i++ {
@@ -101,9 +111,8 @@ func (t *Topic) Subscribe(ctx context.Context, cfg config.Config, address string
 	}
 
 	t.Subscribers = append(t.Subscribers, sub)
-	t.lock.Unlock()
 
-	go sub.HandleQueue(ctx, cfg, t.Name)
+	go sub.HandleQueue(newCtx, cfg, t.Name)
 }
 
 func (t *Topic) Unsubscribe(addr string) error {

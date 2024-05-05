@@ -3,13 +3,15 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/NamanBalaji/flux/internal/broker/service"
-	"github.com/NamanBalaji/flux/pkg/config"
-	"github.com/NamanBalaji/flux/pkg/message"
-	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/NamanBalaji/flux/internal/broker/service"
+	"github.com/NamanBalaji/flux/pkg/config"
+	"github.com/NamanBalaji/flux/pkg/message"
 )
 
 func PublishMessageHandler(cfg config.Config, broker *service.Broker) gin.HandlerFunc {

@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	topicPkg "github.com/NamanBalaji/flux/pkg/broker/topic"
 	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/message"
-	"sync"
 )
 
 type Broker struct {

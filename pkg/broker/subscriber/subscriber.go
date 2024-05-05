@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/message"
 	"github.com/NamanBalaji/flux/pkg/queue"
-	"net/http"
-	"time"
 )
 
 type Subscriber struct {
@@ -57,7 +58,7 @@ func (s *Subscriber) HandleQueue(ctx context.Context, cfg config.Config, topicNa
 			}
 
 			msg := s.MessageQueue.Peek()
-			err := s.pushMessage(cfg, msg, topicName)
+			err := s.pushMessage(ctx, cfg, msg, topicName)
 			if err == nil {
 				msg = s.MessageQueue.Dequeue()
 				msg.Ack(s.Addr)
@@ -66,7 +67,7 @@ func (s *Subscriber) HandleQueue(ctx context.Context, cfg config.Config, topicNa
 	}
 }
 
-func (s *Subscriber) pushMessage(cfg config.Config, msg *message.Message, topicName string) error {
+func (s *Subscriber) pushMessage(ctx context.Context, cfg config.Config, msg *message.Message, topicName string) error {
 	res := MessageResponse{
 		Id:      msg.Id,
 		Payload: msg.Payload,
@@ -78,20 +79,37 @@ func (s *Subscriber) pushMessage(cfg config.Config, msg *message.Message, topicN
 		return fmt.Errorf("error marshaling message: %v", err)
 	}
 
+	client := &http.Client{
+		Timeout: time.Duration(cfg.Subscriber.Timeout) * time.Second,
+	}
+
 	for i := 0; i < cfg.Subscriber.RetryCount; i++ {
-		resp, err := http.Post(s.Addr, "application/json", bytes.NewBuffer(jsonBody))
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("context canceled: %v", err)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, "POST", s.Addr, bytes.NewBuffer(jsonBody))
+		if err != nil {
+			return fmt.Errorf("error creating request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
-			// Successfully sent the message
+			resp.Body.Close()
+
 			return nil
 		}
 
-		ticker := time.NewTicker(time.Duration(cfg.Subscriber.RetryInterval) * time.Second)
-		select {
-		case <-ticker.C:
-			ticker.Stop()
+		if i < cfg.Subscriber.RetryCount-1 {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("context canceled: %v", ctx.Err())
+			case <-time.After(time.Duration(cfg.Subscriber.Timeout) * time.Second):
+			}
 		}
 	}
 
 	s.IsActive = false
-	return fmt.Errorf("failed to send message after %d retries", retryCount)
+	return fmt.Errorf("failed to send message after %d retries", cfg.Subscriber.RetryCount)
 }

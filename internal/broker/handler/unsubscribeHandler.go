@@ -3,11 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/NamanBalaji/flux/internal/broker/service"
-	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/NamanBalaji/flux/internal/broker/service"
 )
 
 func UnsubscribeHandler(broker *service.Broker) gin.HandlerFunc {

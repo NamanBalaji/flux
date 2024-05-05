@@ -1,9 +1,10 @@
 package message
 
 import (
-	"github.com/NamanBalaji/flux/pkg/config"
 	"sync"
 	"time"
+
+	"github.com/NamanBalaji/flux/pkg/config"
 )
 
 type Message struct {

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/NamanBalaji/flux/internal/broker/service"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/NamanBalaji/flux/internal/broker/api"
+	"github.com/NamanBalaji/flux/internal/broker/service"
 	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/constants"
 )
@@ -78,7 +78,7 @@ func messagesCleanupScheduler(cfg config.Config, broker *service.Broker, interva
 	for {
 		select {
 		case <-ticker.C:
-			log.Println("Cleaning up subscribers")
+			log.Println("Cleaning up messages")
 			broker.CleanupMessages(cfg)
 		}
 	}
