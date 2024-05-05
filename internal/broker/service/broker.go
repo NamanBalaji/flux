@@ -75,7 +75,7 @@ func (b *Broker) Unsubscribe(topicName string, address string) error {
 	return topic.Unsubscribe(address)
 }
 
-func (b *Broker) CleanSubscribers() {
+func (b *Broker) CleanSubscribers(cfg config.Config) {
 	var topicsToClean []*topicPkg.Topic
 
 	b.mu.Lock()
@@ -90,7 +90,7 @@ func (b *Broker) CleanSubscribers() {
 		go func(t *topicPkg.Topic) {
 			log.Println("Cleaning subscriber for topic ", t.Name)
 			defer wg.Done()
-			t.CleanupSubscribers()
+			t.CleanupSubscribers(cfg)
 		}(topic)
 	}
 	wg.Wait()

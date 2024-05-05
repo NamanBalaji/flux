@@ -167,10 +167,16 @@ func (t *Topic) CleanupSubscribers(cfg config.Config) {
 			sub.Lock.Unlock()
 
 			totalMessages := t.MessageQueue.Len()
+			var wg sync.WaitGroup
 			for i := 0; i < totalMessages; i++ {
-				msg := t.MessageQueue.GetAt(i)
-				msg.RemoveSubscriber(sub.Addr)
+				wg.Add(1)
+				go func(index int) {
+					defer wg.Done()
+					msg := t.MessageQueue.GetAt(index)
+					msg.RemoveSubscriber(sub.Addr)
+				}(i)
 			}
+			wg.Wait()
 
 			log.Printf("Subscriber[Address: %s] has been deleted from the topic %s\n", sub.Addr, t.Name)
 			continue

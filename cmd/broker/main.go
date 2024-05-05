@@ -51,7 +51,7 @@ func main() {
 		}
 	}()
 
-	go subscriberCleanupScheduler(broker, time.Duration(cfg.Subscriber.CleanupTime)*time.Second)
+	go subscriberCleanupScheduler(*cfg, broker, time.Duration(cfg.Subscriber.CleanupTime)*time.Second)
 	go messagesCleanupScheduler(*cfg, broker, time.Duration(cfg.Message.CleanupTime)*time.Second)
 
 	select {
@@ -62,13 +62,13 @@ func main() {
 	}
 }
 
-func subscriberCleanupScheduler(broker *service.Broker, interval time.Duration) {
+func subscriberCleanupScheduler(cfg config.Config, broker *service.Broker, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	for {
 		select {
 		case <-ticker.C:
 			log.Println("Cleaning up subscribers")
-			broker.CleanSubscribers()
+			broker.CleanSubscribers(cfg)
 		}
 	}
 }
