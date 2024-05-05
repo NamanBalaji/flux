@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	topicPkg "github.com/NamanBalaji/flux/pkg/broker/topic"
@@ -23,32 +24,19 @@ func NewBroker() *Broker {
 }
 
 func (b *Broker) PublishMessage(cfg config.Config, topicName string, msg *message.Message) bool {
-	var msgChan chan *message.Message
-
+	log.Printf("Trying to publish message with id: %s \n", msg.Id)
 	b.mu.Lock()
+
 	topic, ok := b.Topics[topicName]
 	if !ok {
 		topic = topicPkg.CreateTopic(topicName, cfg.Topic.Buffer)
 		b.Topics[topicName] = topic
+
+		log.Println("Created topic: ", topicName)
 	}
+	defer b.mu.Unlock()
 
-	added := topic.AddMessage(msg)
-	if !added {
-		b.mu.Unlock()
-
-		return true
-	}
-
-	msgChan = topic.MessageChan
-
-	b.mu.Unlock()
-
-	select {
-	case msgChan <- msg:
-		return true
-	default:
-		return false
-	}
+	return topic.AddMessage(msg)
 }
 
 func (b *Broker) ValidateTopics(topics []string) error {
@@ -70,6 +58,7 @@ func (b *Broker) Subscribe(ctx context.Context, cfg config.Config, topicName str
 	topic := b.Topics[topicName]
 	b.mu.Unlock()
 
+	log.Printf("Subscriber[Address: %s] trying to subscribe to the topic %s \n", address, topicName)
 	topic.Subscribe(ctx, cfg, address, readOld)
 }
 
@@ -82,6 +71,7 @@ func (b *Broker) Unsubscribe(topicName string, address string) error {
 		return fmt.Errorf("no topic with the name %s exist", topicName)
 	}
 
+	log.Printf("Subscriber[Address: %s] trying to unsubscribe from the topic %s \n", address, topicName)
 	return topic.Unsubscribe(address)
 }
 
@@ -98,6 +88,7 @@ func (b *Broker) CleanSubscribers() {
 	for _, topic := range topicsToClean {
 		wg.Add(1)
 		go func(t *topicPkg.Topic) {
+			log.Println("Cleaning subscriber for topic ", t.Name)
 			defer wg.Done()
 			t.CleanupSubscribers()
 		}(topic)
@@ -118,6 +109,7 @@ func (b *Broker) CleanupMessages(cfg config.Config) {
 	for _, topic := range topicsToClean {
 		wg.Add(1)
 		go func(cfg config.Config, t *topicPkg.Topic) {
+			log.Println("Cleaning messages for topic ", t.Name)
 			defer wg.Done()
 			t.CleanupMessages(cfg)
 		}(cfg, topic)

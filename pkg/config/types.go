@@ -16,6 +16,7 @@ type Subscriber struct {
 	RetryCount    int `yaml:"retry_count"`
 	RetryInterval int `yaml:"retry_interval"`
 	Timeout       int `yaml:"timeout"`
+	InactiveTime  int `yaml:"inactive_time"`
 }
 
 type Topic struct {

@@ -3,7 +3,9 @@ package topic
 import (
 	"context"
 	"errors"
+	"log"
 	"sync"
+	"time"
 
 	"github.com/NamanBalaji/flux/pkg/broker/subscriber"
 	"github.com/NamanBalaji/flux/pkg/config"
@@ -42,15 +44,26 @@ func CreateTopic(name string, bufferSize int) *Topic {
 
 func (t *Topic) AddMessage(msg *message.Message) bool {
 	t.lock.Lock()
-	defer t.lock.Unlock()
 	if _, ok := t.MessageSet[msg.Id]; ok {
+		log.Printf("Topic %s already has a message with id %s \n", t.Name, msg.Id)
+
+		return true
+	}
+	defer t.lock.Unlock()
+
+	select {
+	case t.MessageChan <- msg:
+		t.lock.Lock()
+		t.MessageSet[msg.Id] = struct{}{}
+		t.MessageQueue.Enqueue(msg)
+		t.lock.Unlock()
+
+		log.Printf("Published message with id %s to topic: %s \n", msg.Id, t.Name)
+		return true
+	default:
+		log.Printf("Could not publish message with id %s to topic %s as topic channel is full\n", msg.Id, t.Name)
 		return false
 	}
-
-	t.MessageSet[msg.Id] = struct{}{}
-	t.MessageQueue.Enqueue(msg)
-
-	return true
 }
 
 func (t *Topic) ManageTopic() {
@@ -71,7 +84,7 @@ func (t *Topic) deliverMessageToSubscribers(msg *message.Message) {
 
 	for _, sub := range subsCopy {
 		sub.AddMessage(msg)
-		msg.Ack(sub.Addr)
+		msg.AddSubscriber(sub.Addr)
 	}
 }
 
@@ -82,12 +95,17 @@ func (t *Topic) Subscribe(ctx context.Context, cfg config.Config, address string
 	// Check if the subscriber already exists and reactivate them
 	for _, sub := range t.Subscribers {
 		if sub.Addr == address {
+			sub.Lock.Lock()
 			if !sub.IsActive {
+				log.Printf("Subscriber[Address: %s] already exists, reactivating \n", address)
+
 				sub.IsActive = true
 				sub.CancelFunc()
 
 				newCtx, cancel := context.WithCancel(ctx)
 				sub.CancelFunc = cancel
+
+				sub.Lock.Unlock()
 
 				go sub.HandleQueue(newCtx, cfg, t.Name)
 			}
@@ -102,6 +120,7 @@ func (t *Topic) Subscribe(ctx context.Context, cfg config.Config, address string
 	sub.CancelFunc = cancel
 
 	if readOld {
+		log.Printf("Enqueing old topic %s messages for Subscriber[Address: %s] .\n", t.Name, address)
 		totalMessages := t.MessageQueue.Len()
 		for i := 0; i < totalMessages; i++ {
 			msg := t.MessageQueue.GetAt(i)
@@ -113,6 +132,8 @@ func (t *Topic) Subscribe(ctx context.Context, cfg config.Config, address string
 	t.Subscribers = append(t.Subscribers, sub)
 
 	go sub.HandleQueue(newCtx, cfg, t.Name)
+
+	log.Printf("Successfully subscribed Subscriber[Address: %s] to the topic %s \n", address, t.Name)
 }
 
 func (t *Topic) Unsubscribe(addr string) error {
@@ -120,8 +141,11 @@ func (t *Topic) Unsubscribe(addr string) error {
 	defer t.lock.Unlock()
 
 	for _, s := range t.Subscribers {
+		s.Lock.Lock()
 		if s.Addr == addr {
 			s.IsActive = false
+			s.Lock.Unlock()
+			log.Printf("Subscriber[Address: %s] subscribed to the topic %s set to inactive \n", addr, t.Name)
 
 			return nil
 		}
@@ -130,14 +154,17 @@ func (t *Topic) Unsubscribe(addr string) error {
 	return errors.New("no such topic: " + t.Name)
 }
 
-func (t *Topic) CleanupSubscribers() {
+func (t *Topic) CleanupSubscribers(cfg config.Config) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	var activeSubscribers []*subscriber.Subscriber
+
 	for _, sub := range t.Subscribers {
-		if !sub.IsActive {
+		sub.Lock.Lock()
+		if !sub.IsActive && time.Now().Sub(sub.LastActive) > time.Duration(cfg.Subscriber.InactiveTime)*time.Second {
 			sub.CancelFunc()
+			sub.Lock.Unlock()
 
 			totalMessages := t.MessageQueue.Len()
 			for i := 0; i < totalMessages; i++ {
@@ -145,6 +172,7 @@ func (t *Topic) CleanupSubscribers() {
 				msg.RemoveSubscriber(sub.Addr)
 			}
 
+			log.Printf("Subscriber[Address: %s] has been deleted from the topic %s\n", sub.Addr, t.Name)
 			continue
 		}
 
@@ -162,6 +190,8 @@ func (t *Topic) CleanupMessages(cfg config.Config) {
 		if t.MessageQueue.GetAt(i).SafeToDelete(cfg) {
 			msg := t.MessageQueue.DeleteAtIndex(i)
 			delete(t.MessageSet, msg.Id)
+
+			log.Printf("Message with id %s has been deleted from the topic %s \n", msg.Id, t.Name)
 		}
 	}
 }

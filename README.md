@@ -4,6 +4,7 @@ Flux is a high-performance, fault-tolerant distributed event streaming platform,
 ## Todo
 -[ ] add logging
 -[ ] state dump
+-[ ] subscriber cleanup improve logic
 
 ## Design
 

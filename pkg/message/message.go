@@ -1,6 +1,7 @@
 package message
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -29,6 +30,7 @@ func (m *Message) Ack(subscriberAddress string) {
 	defer m.Lock.Unlock()
 
 	m.Delivered[subscriberAddress] = true
+	log.Printf("Acked messageID %s to subscriber[address: %s] \n", m.Id, subscriberAddress)
 }
 
 func (m *Message) AddSubscriber(subscriberAddress string) {
@@ -36,6 +38,7 @@ func (m *Message) AddSubscriber(subscriberAddress string) {
 	defer m.Lock.Unlock()
 
 	m.Delivered[subscriberAddress] = false
+	log.Printf("messageID %s tracking ACK from subscriber[address: %s] \n", m.Id, subscriberAddress)
 }
 
 func (m *Message) RemoveSubscriber(subscriberAddress string) {
@@ -43,14 +46,13 @@ func (m *Message) RemoveSubscriber(subscriberAddress string) {
 	defer m.Lock.Unlock()
 
 	delete(m.Delivered, subscriberAddress)
+	log.Printf("messageID %s not tracking ACK from subscriber[address: %s] \n", m.Id, subscriberAddress)
 }
 
 func (m *Message) SafeToDelete(cfg config.Config) bool {
 	allAcked := true
 
 	m.Lock.Lock()
-	defer m.Lock.Unlock()
-
 	for _, acked := range m.Delivered {
 		if !acked {
 			allAcked = false
@@ -58,6 +60,7 @@ func (m *Message) SafeToDelete(cfg config.Config) bool {
 			break
 		}
 	}
+	m.Lock.Unlock()
 
 	return allAcked && time.Now().Sub(m.AddedAt) > time.Duration(cfg.Message.TTL)*time.Second
 }

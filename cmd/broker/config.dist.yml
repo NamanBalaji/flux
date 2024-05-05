@@ -7,6 +7,7 @@ message:
   cleanup_time: 300
 subscriber:
   retry_count: 3
-  retry_interval: 30
+  retry_interval: 5
   cleanup_time: 300
-  timeout: 5
+  timeout: 2
+  inactive_time: 300
