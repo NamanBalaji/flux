@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/NamanBalaji/flux/internal/broker/service"
+	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"net/http"
 )
 
-func RegisterSubscriberHandler(broker *service.Broker) gin.HandlerFunc {
+func RegisterSubscriberHandler(cfg config.Config, broker *service.Broker) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		jsonData, err := io.ReadAll(c.Request.Body)
 		if err != nil {
@@ -29,8 +30,6 @@ func RegisterSubscriberHandler(broker *service.Broker) gin.HandlerFunc {
 			return
 		}
 
-		// add address validation ?
-
 		// if topics absent return error
 		err = broker.ValidateTopics(body.Topics)
 		if err != nil {
@@ -41,7 +40,7 @@ func RegisterSubscriberHandler(broker *service.Broker) gin.HandlerFunc {
 
 		// create new subscriber for each topic
 		for _, topic := range body.Topics {
-			broker.Subscribe(topic, body.Address, body.ReadOld)
+			broker.Subscribe(c, cfg, topic, body.Address, body.ReadOld)
 		}
 
 		c.JSON(http.StatusOK, gin.H{

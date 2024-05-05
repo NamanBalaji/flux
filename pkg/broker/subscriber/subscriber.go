@@ -2,8 +2,10 @@ package subscriber
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/message"
 	"github.com/NamanBalaji/flux/pkg/queue"
 	"net/http"
@@ -14,20 +16,24 @@ type Subscriber struct {
 	Addr         string
 	MessageQueue *queue.Queue
 	IsActive     bool
+	CancelFunc   context.CancelFunc
 }
 
 type MessageResponse struct {
-	Message message.Message `json:"message"`
-	Topic   string          `json:"topic"`
+	Id      string `json:"id"`
+	Payload string `json:"payload"`
+	Topic   string `json:"topic"`
 }
 
-func NewSubscriber(addr string) *Subscriber {
+func NewSubscriber(ctx context.Context, addr string) *Subscriber {
 	msgQueue := queue.NewQueue()
+	_, cancel := context.WithCancel(ctx)
 
 	return &Subscriber{
 		Addr:         addr,
 		MessageQueue: msgQueue,
 		IsActive:     true,
+		CancelFunc:   cancel,
 	}
 }
 
@@ -36,28 +42,34 @@ func (s *Subscriber) WithQueue(q *queue.Queue) *Subscriber {
 	return s
 }
 
-func (s *Subscriber) AddMessage(msg message.Message) {
+func (s *Subscriber) AddMessage(msg *message.Message) {
 	s.MessageQueue.Enqueue(msg)
 }
 
-func (s *Subscriber) HandleQueue(topicName string) {
+func (s *Subscriber) HandleQueue(ctx context.Context, cfg config.Config, topicName string) {
 	for {
-		if !s.IsActive {
+		select {
+		case <-ctx.Done():
 			return
-		}
+		default:
+			if !s.IsActive {
+				return
+			}
 
-		msg := s.MessageQueue.Peek()
-		err := s.pushMessage(msg, topicName)
-		if err == nil {
-			s.MessageQueue.Dequeue()
+			msg := s.MessageQueue.Peek()
+			err := s.pushMessage(cfg, msg, topicName)
+			if err == nil {
+				msg = s.MessageQueue.Dequeue()
+				msg.Ack(s.Addr)
+			}
 		}
-
 	}
 }
 
-func (s *Subscriber) pushMessage(msg message.Message, topicName string) error {
+func (s *Subscriber) pushMessage(cfg config.Config, msg *message.Message, topicName string) error {
 	res := MessageResponse{
-		Message: msg,
+		Id:      msg.Id,
+		Payload: msg.Payload,
 		Topic:   topicName,
 	}
 
@@ -66,19 +78,14 @@ func (s *Subscriber) pushMessage(msg message.Message, topicName string) error {
 		return fmt.Errorf("error marshaling message: %v", err)
 	}
 
-	// Define retry parameters
-	retryCount := 3
-	retryInterval := 2 * time.Second
-
-	for i := 0; i < retryCount; i++ {
+	for i := 0; i < cfg.Subscriber.RetryCount; i++ {
 		resp, err := http.Post(s.Addr, "application/json", bytes.NewBuffer(jsonBody))
 		if err == nil && resp.StatusCode == http.StatusOK {
 			// Successfully sent the message
 			return nil
 		}
 
-		// Create a ticker for managing retries
-		ticker := time.NewTicker(retryInterval)
+		ticker := time.NewTicker(time.Duration(cfg.Subscriber.RetryInterval) * time.Second)
 		select {
 		case <-ticker.C:
 			ticker.Stop()

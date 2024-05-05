@@ -38,7 +38,12 @@ func UnsubscribeHandler(broker *service.Broker) gin.HandlerFunc {
 		}
 
 		for _, topic := range body.Topics {
-			broker.UnSubscribe(topic, body.Address)
+			err := broker.Unsubscribe(topic, body.Address)
+			if err != nil {
+				log.Printf("failed to unsubscribe [%s]: %s", topic, err)
+
+				c.JSON(http.StatusBadRequest, fmt.Errorf("topics not valid: %s", err))
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/NamanBalaji/flux/internal/broker/service"
+	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/message"
 	"github.com/gin-gonic/gin"
 	"io"
@@ -11,7 +12,7 @@ import (
 	"net/http"
 )
 
-func PublishMessageHandler(broker *service.Broker) gin.HandlerFunc {
+func PublishMessageHandler(cfg config.Config, broker *service.Broker) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		jsonData, err := io.ReadAll(c.Request.Body)
 		if err != nil {
@@ -30,10 +31,10 @@ func PublishMessageHandler(broker *service.Broker) gin.HandlerFunc {
 			return
 		}
 
-		processed := broker.PublishMessage(body.Topic, message.Message{
-			Id:      body.Id,
-			Payload: body.Message,
-		})
+		msg := message.NewMessage(body.Id, body.Message)
+
+		processed := broker.PublishMessage(cfg, body.Topic, msg)
+
 		if !processed {
 			log.Print("error occurred while writing the message to the topic [ERROR]: server too busy")
 			c.JSON(http.StatusInternalServerError, fmt.Errorf("error occurred while writing the message to the topic [ERROR]: server too busy"))

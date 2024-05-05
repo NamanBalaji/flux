@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	topicPkg "github.com/NamanBalaji/flux/pkg/broker/topic"
+	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/message"
 	"sync"
 )
@@ -19,17 +21,23 @@ func NewBroker() *Broker {
 	}
 }
 
-func (b *Broker) PublishMessage(topicName string, msg message.Message) bool {
-	var msgChan chan message.Message
+func (b *Broker) PublishMessage(cfg config.Config, topicName string, msg *message.Message) bool {
+	var msgChan chan *message.Message
 
 	b.mu.Lock()
 	topic, ok := b.Topics[topicName]
 	if !ok {
-		topic = topicPkg.CreateTopic(topicName)
+		topic = topicPkg.CreateTopic(topicName, cfg.Topic.Buffer)
 		b.Topics[topicName] = topic
 	}
 
-	topic.AddMessage(msg)
+	added := topic.AddMessage(msg)
+	if !added {
+		b.mu.Unlock()
+
+		return true
+	}
+
 	msgChan = topic.MessageChan
 
 	b.mu.Unlock()
@@ -56,20 +64,24 @@ func (b *Broker) ValidateTopics(topics []string) error {
 	return nil
 }
 
-func (b *Broker) Subscribe(topicName string, address string, readOld bool) {
+func (b *Broker) Subscribe(ctx context.Context, cfg config.Config, topicName string, address string, readOld bool) {
 	b.mu.Lock()
 	topic := b.Topics[topicName]
 	b.mu.Unlock()
 
-	topic.Subscribe(address, readOld)
+	topic.Subscribe(ctx, cfg, address, readOld)
 }
 
-func (b *Broker) UnSubscribe(topicName string, address string) {
+func (b *Broker) Unsubscribe(topicName string, address string) error {
 	b.mu.Lock()
-	topic := b.Topics[topicName]
+	topic, ok := b.Topics[topicName]
 	b.mu.Unlock()
 
-	topic.Unsubscribe(address)
+	if !ok {
+		return fmt.Errorf("no topic with the name %s exist", topicName)
+	}
+
+	return topic.Unsubscribe(address)
 }
 
 func (b *Broker) CleanSubscribers() {
@@ -88,6 +100,26 @@ func (b *Broker) CleanSubscribers() {
 			defer wg.Done()
 			t.CleanupSubscribers()
 		}(topic)
+	}
+	wg.Wait()
+}
+
+func (b *Broker) CleanupMessages(cfg config.Config) {
+	var topicsToClean []*topicPkg.Topic
+
+	b.mu.Lock()
+	for _, topic := range b.Topics {
+		topicsToClean = append(topicsToClean, topic)
+	}
+	b.mu.Unlock()
+
+	var wg sync.WaitGroup
+	for _, topic := range topicsToClean {
+		wg.Add(1)
+		go func(cfg config.Config, t *topicPkg.Topic) {
+			defer wg.Done()
+			t.CleanupMessages(cfg)
+		}(cfg, topic)
 	}
 	wg.Wait()
 }

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/NamanBalaji/flux/internal/broker/api"
 	"github.com/NamanBalaji/flux/pkg/config"
@@ -27,7 +28,7 @@ func main() {
 
 	broker := service.NewBroker()
 
-	apiRouter := api.SetupRouter(broker)
+	apiRouter := api.SetupRouter(*cfg, broker)
 
 	port := fmt.Sprintf(":%d", cfg.Api.Port)
 
@@ -50,13 +51,35 @@ func main() {
 		}
 	}()
 
-	// subscriber cleanup go routine
-	// message cleanup go routine
+	go subscriberCleanupScheduler(broker, time.Duration(cfg.Subscriber.CleanupTime)*time.Second)
+	go messagesCleanupScheduler(*cfg, broker, time.Duration(cfg.Message.CleanupTime)*time.Second)
 
 	select {
 	case <-stopChan:
 		log.Println("Shutting down server...")
 	case <-serverErrChan:
 		log.Fatalf("Shutting down server")
+	}
+}
+
+func subscriberCleanupScheduler(broker *service.Broker, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	for {
+		select {
+		case <-ticker.C:
+			log.Println("Cleaning up subscribers")
+			broker.CleanSubscribers()
+		}
+	}
+}
+
+func messagesCleanupScheduler(cfg config.Config, broker *service.Broker, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	for {
+		select {
+		case <-ticker.C:
+			log.Println("Cleaning up subscribers")
+			broker.CleanupMessages(cfg)
+		}
 	}
 }

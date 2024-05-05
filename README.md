@@ -2,11 +2,9 @@
 Flux is a high-performance, fault-tolerant distributed event streaming platform, featuring scalable topic-based messaging, and robust replication to ensure data consistency and availability.
 
 ## Todo
--[ ] implement deduplication
--[ ] implement context and error handling
--[ ] message cleanup on ACK
--[ ] clean up un active subscribers
 -[ ] add logging
+-[ ] better push message
+-[ ] state dump
 
 ## Design
 

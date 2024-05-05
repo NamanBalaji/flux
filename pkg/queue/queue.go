@@ -6,7 +6,7 @@ import (
 )
 
 type Queue struct {
-	messages []message.Message
+	messages []*message.Message
 	lock     sync.Mutex
 	cond     *sync.Cond
 }
@@ -18,7 +18,7 @@ func NewQueue() *Queue {
 	return q
 }
 
-func (q *Queue) Enqueue(msg message.Message) {
+func (q *Queue) Enqueue(msg *message.Message) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -26,7 +26,7 @@ func (q *Queue) Enqueue(msg message.Message) {
 	q.cond.Signal()
 }
 
-func (q *Queue) Dequeue() message.Message {
+func (q *Queue) Dequeue() *message.Message {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -40,7 +40,7 @@ func (q *Queue) Dequeue() message.Message {
 	return msg
 }
 
-func (q *Queue) Peek() message.Message {
+func (q *Queue) Peek() *message.Message {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -53,8 +53,34 @@ func (q *Queue) Peek() message.Message {
 	return msg
 }
 
-func (q *Queue) GetCopy() *Queue {
-	return &Queue{
-		messages: q.messages,
+func (q *Queue) Len() int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return len(q.messages)
+}
+
+func (q *Queue) GetAt(index int) *message.Message {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return q.messages[index]
+}
+
+func (q *Queue) DeleteAtIndex(index int) *message.Message {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	if index < 0 || index >= len(q.messages) {
+		return nil
 	}
+
+	// Swap the item to delete with the last item
+	lastIndex := len(q.messages) - 1
+	q.messages[index], q.messages[lastIndex] = q.messages[lastIndex], q.messages[index]
+	// Remove the last item (deleted item)
+	item := q.messages[lastIndex]
+	q.messages = q.messages[:lastIndex]
+
+	return item
 }

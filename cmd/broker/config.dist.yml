@@ -1,2 +1,11 @@
 api:
   port: 9092
+topic:
+  buffer: 10
+message:
+  ttl: 600
+  cleanup_time: 300
+subscriber:
+  retry_count: 3
+  retry_interval: 30
+  cleanup_time: 300
