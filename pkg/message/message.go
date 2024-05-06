@@ -53,6 +53,8 @@ func (m *Message) SafeToDelete(cfg config.Config) bool {
 	allAcked := true
 
 	m.Lock.Lock()
+	defer m.Lock.Unlock()
+
 	for _, acked := range m.Delivered {
 		if !acked {
 			allAcked = false
@@ -60,7 +62,6 @@ func (m *Message) SafeToDelete(cfg config.Config) bool {
 			break
 		}
 	}
-	m.Lock.Unlock()
 
 	return allAcked && time.Now().Sub(m.AddedAt) > time.Duration(cfg.Message.TTL)*time.Second
 }

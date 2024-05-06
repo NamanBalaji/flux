@@ -46,10 +46,11 @@ func (t *Topic) AddMessage(msg *message.Message) bool {
 	t.lock.Lock()
 	if _, ok := t.MessageSet[msg.Id]; ok {
 		log.Printf("Topic %s already has a message with id %s \n", t.Name, msg.Id)
+		t.lock.Unlock()
 
 		return true
 	}
-	defer t.lock.Unlock()
+	t.lock.Unlock()
 
 	select {
 	case t.MessageChan <- msg:
@@ -77,8 +78,8 @@ func (t *Topic) deliverMessageToSubscribers(msg *message.Message) {
 	subscribers := t.Subscribers
 
 	subsCopy := make([]*subscriber.Subscriber, len(subscribers))
-	for _, sub := range subscribers {
-		subsCopy = append(subsCopy, sub)
+	for i, sub := range subscribers {
+		subsCopy[i] = sub
 	}
 	t.lock.Unlock()
 
@@ -108,7 +109,11 @@ func (t *Topic) Subscribe(ctx context.Context, cfg config.Config, address string
 				sub.Lock.Unlock()
 
 				go sub.HandleQueue(newCtx, cfg, t.Name)
+
+				return
 			}
+
+			sub.Lock.Unlock()
 
 			return
 		}
@@ -181,6 +186,7 @@ func (t *Topic) CleanupSubscribers(cfg config.Config) {
 			log.Printf("Subscriber[Address: %s] has been deleted from the topic %s\n", sub.Addr, t.Name)
 			continue
 		}
+		sub.Lock.Unlock()
 
 		activeSubscribers = append(activeSubscribers, sub)
 	}

@@ -59,8 +59,10 @@ func (s *Subscriber) HandleQueue(ctx context.Context, cfg config.Config, topicNa
 			if !s.IsActive {
 				log.Printf("Subscriber[Address: %s] subscribed to topic %s is not active returning out of go routine\n", s.Addr, topicName)
 				s.Lock.Unlock()
+
 				return
 			}
+			s.Lock.Unlock()
 
 			msg := s.MessageQueue.Peek()
 			err := s.pushMessage(ctx, cfg, msg, topicName)
@@ -103,7 +105,7 @@ func (s *Subscriber) pushMessage(ctx context.Context, cfg config.Config, msg *me
 			return fmt.Errorf("context canceled: %v", err)
 		}
 
-		req, err := http.NewRequestWithContext(ctx, "POST", s.Addr, bytes.NewBuffer(jsonBody))
+		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/poll", s.Addr), bytes.NewBuffer(jsonBody))
 		if err != nil {
 			return fmt.Errorf("error creating request: %v", err)
 		}
@@ -116,7 +118,7 @@ func (s *Subscriber) pushMessage(ctx context.Context, cfg config.Config, msg *me
 
 			return nil
 		} else {
-			log.Printf("an error occured while trying to send request to the subscriber[Address: %s] subscribed to topic %s \n", s.Addr, topicName)
+			log.Printf("an error occured while trying to send request to the subscriber[Address: %s] subscribed to topic %s: err: %s\n", s.Addr, topicName, err)
 		}
 
 		if i < cfg.Subscriber.RetryCount-1 {

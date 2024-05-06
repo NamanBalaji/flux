@@ -2,12 +2,12 @@
 Flux is a high-performance distributed event streaming platform offering scalable topic-based messaging, guaranteed message ordering, and at-least-once delivery.
 
 ## Todo
--[ ] state dump
--[ ] add subscriber package
--[ ] add producer package
--[ ] integrate with raft
--[ ] add unit tests
--[ ] add docker file
+- [ ] state dump
+- [ ] add subscriber package
+- [ ] add producer package
+- [ ] integrate with raft
+- [ ] add unit tests
+- [ ] add docker file
 
 ## Design
 

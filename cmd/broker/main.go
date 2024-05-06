@@ -69,6 +69,7 @@ func subscriberCleanupScheduler(cfg config.Config, broker *service.Broker, inter
 		case <-ticker.C:
 			log.Println("Cleaning up subscribers")
 			broker.CleanSubscribers(cfg)
+			log.Printf("Subscriber cleanup completed")
 		}
 	}
 }
@@ -80,6 +81,7 @@ func messagesCleanupScheduler(cfg config.Config, broker *service.Broker, interva
 		case <-ticker.C:
 			log.Println("Cleaning up messages")
 			broker.CleanupMessages(cfg)
+			log.Println("Message cleanup completed")
 		}
 	}
 }
