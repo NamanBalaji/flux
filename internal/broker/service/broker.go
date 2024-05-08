@@ -55,7 +55,13 @@ func (b *Broker) ValidateTopics(topics []string) error {
 
 func (b *Broker) Subscribe(ctx context.Context, cfg config.Config, topicName string, address string, readOld bool) {
 	b.mu.Lock()
-	topic := b.Topics[topicName]
+	topic, ok := b.Topics[topicName]
+	if !ok {
+		topic = topicPkg.CreateTopic(topicName, cfg.Topic.Buffer)
+		b.Topics[topicName] = topic
+
+		log.Println("Created topic: ", topicName)
+	}
 	b.mu.Unlock()
 
 	log.Printf("Subscriber[Address: %s] trying to subscribe to the topic %s \n", address, topicName)

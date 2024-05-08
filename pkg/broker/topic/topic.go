@@ -167,7 +167,7 @@ func (t *Topic) CleanupSubscribers(cfg config.Config) {
 
 	for _, sub := range t.Subscribers {
 		sub.Lock.Lock()
-		if !sub.IsActive && time.Now().Sub(sub.LastActive) > time.Duration(cfg.Subscriber.InactiveTime)*time.Second {
+		if !sub.IsActive && time.Now().Sub(sub.LastActive)*time.Second >= time.Duration(cfg.Subscriber.InactiveTime)*time.Second {
 			sub.CancelFunc()
 			sub.Lock.Unlock()
 

@@ -63,5 +63,5 @@ func (m *Message) SafeToDelete(cfg config.Config) bool {
 		}
 	}
 
-	return allAcked && time.Now().Sub(m.AddedAt) > time.Duration(cfg.Message.TTL)*time.Second
+	return allAcked && time.Now().Sub(m.AddedAt)*time.Second >= time.Duration(cfg.Message.TTL)*time.Second
 }
