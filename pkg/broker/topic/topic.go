@@ -126,7 +126,7 @@ func (t *Topic) Subscribe(ctx context.Context, cfg config.Config, address string
 
 	// Creating new subscriber if it does not exist
 	newCtx, cancel := context.WithCancel(ctx)
-	sub := subscriber.NewSubscriber(newCtx, address)
+	sub := subscriber.NewSubscriber(address)
 	sub.CancelFunc = cancel
 
 	if readOld {

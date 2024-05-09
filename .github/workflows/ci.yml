@@ -25,10 +25,13 @@ jobs:
       - name: Get dependencies
         run: go mod download
 
-      - name: Run tests with coverage
-        run: go test ./... -coverprofile=coverage.txt -covermode=atomic
+      - name: Run coverage
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Refresh Go Report Card
+        run: curl https://goreportcard.com/checks?url=https://github.com/NamanBalaji/flux

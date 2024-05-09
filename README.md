@@ -2,7 +2,8 @@
 Flux is a high-performance in memory event streaming platform offering scalable topic-based messaging, guaranteed message ordering, and at-least-once delivery.
 
 ![Build Status](https://github.com/NamanBalaji/flux/actions/workflows/ci.yml/badge.svg)
-[![codecov](https://codecov.io/gh/NamanBalaji/flux/branch/main/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/<username>/<repository>)
+[![Go Report Card](https://goreportcard.com/badge/github.com/NamanBalaji/flux)](https://goreportcard.com/report/github.com/NamanBalaji/flux)
+[![codecov](https://codecov.io/gh/NamanBalaji/flux/branch/main/graph/badge.svg)](https://codecov.io/gh/NamanBalaji/flux)
 
 ## Features
 

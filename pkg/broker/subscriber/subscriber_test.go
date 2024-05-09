@@ -31,7 +31,7 @@ func setupMockServer() *httptest.Server {
 }
 
 func TestAddMessage(t *testing.T) {
-	sub := NewSubscriber(context.Background(), "http://example.com")
+	sub := NewSubscriber("http://example.com")
 	msg := &message.Message{Id: "1", Payload: "data"}
 	sub.AddMessage(msg)
 
@@ -51,7 +51,7 @@ func TestHandleQueue(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sub := NewSubscriber(ctx, server.URL)
+	sub := NewSubscriber(server.URL)
 	sub.IsActive = true
 	msg := message.NewMessage("1", "data")
 	sub.AddMessage(msg)
@@ -84,7 +84,7 @@ func TestHandleQueue_PushFail(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sub := NewSubscriber(ctx, server.URL)
+	sub := NewSubscriber(server.URL)
 	sub.IsActive = true
 	msg := message.NewMessage("fail", "data")
 	sub.AddMessage(msg)
@@ -117,7 +117,7 @@ func TestPushMessageFailure(t *testing.T) {
 		Subscriber: config.Subscriber{Timeout: 50, RetryCount: 2},
 	}
 
-	sub := NewSubscriber(ctx, server.URL)
+	sub := NewSubscriber(server.URL)
 	sub.IsActive = true
 	msg := message.NewMessage("fail", "data")
 	sub.AddMessage(msg)

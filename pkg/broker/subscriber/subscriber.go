@@ -31,7 +31,7 @@ type MessageResponse struct {
 	Topic   string `json:"topic"`
 }
 
-func NewSubscriber(ctx context.Context, addr string) *Subscriber {
+func NewSubscriber(addr string) *Subscriber {
 	msgQueue := queue.NewQueue()
 
 	return &Subscriber{
@@ -119,7 +119,7 @@ func (s *Subscriber) pushMessage(ctx context.Context, cfg config.Config, msg *me
 
 			return nil
 		} else {
-			log.Printf("an error occured while trying to send request to the subscriber[Address: %s] subscribed to topic %s: err: %s\n", s.Addr, topicName, err)
+			log.Printf("an error occurred while trying to send request to the subscriber[Address: %s] subscribed to topic %s: err: %s\n", s.Addr, topicName, err)
 		}
 
 		if i < cfg.Subscriber.RetryCount-1 {

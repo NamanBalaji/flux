@@ -47,7 +47,7 @@ func main() {
 		log.Printf("starting broken on port %s", port)
 		err := server.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("Error occured while trying to start the server %v \n", err)
+			log.Printf("Error occurred while trying to start the server %v \n", err)
 			close(serverErrChan)
 		}
 	}()

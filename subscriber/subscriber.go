@@ -40,7 +40,7 @@ func NewSubscriber(host string, port int, brokerAddr string) *Subscriber {
 		log.Printf("starting subscriber on port %d", port)
 		err := server.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Error occured while trying to start the subscriber server %v \n", err)
+			log.Fatalf("Error occurred while trying to start the subscriber server %v \n", err)
 		}
 	}()
 
