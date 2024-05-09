@@ -1,4 +1,4 @@
-package handler
+package request
 
 type PublishMessageRequest struct {
 	Id      string `json:"id"`
@@ -15,4 +15,10 @@ type RegisterSubscriberRequest struct {
 type UnsubscribeRequest struct {
 	Address string   `json:"address"`
 	Topics  []string `json:"topics"`
+}
+
+type PollMessage struct {
+	Id      string `json:"id"`
+	Payload string `json:"payload"`
+	Topic   string `json:"topic"`
 }

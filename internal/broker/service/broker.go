@@ -14,7 +14,7 @@ import (
 type Broker struct {
 	mu          sync.Mutex
 	Topics      topicPkg.Topics
-	RequestChan chan PublishRequest
+	MessageChan chan PublishRequest
 }
 
 type PublishRequest struct {
@@ -25,20 +25,20 @@ type PublishRequest struct {
 func NewBroker() *Broker {
 	return &Broker{
 		Topics:      topicPkg.CreateTopics(),
-		RequestChan: make(chan PublishRequest, 100),
+		MessageChan: make(chan PublishRequest, 100),
 	}
 }
 
 func (b *Broker) StartRequestPrecessing(cfg config.Config) {
 	go func() {
-		for req := range b.RequestChan {
+		for req := range b.MessageChan {
 			b.publishMessage(cfg, req.Topic, req.Message)
 		}
 	}()
 }
 
 func (b *Broker) EnqueueRequest(req PublishRequest) {
-	b.RequestChan <- req
+	b.MessageChan <- req
 }
 
 func (b *Broker) publishMessage(cfg config.Config, topicName string, msg *message.Message) {

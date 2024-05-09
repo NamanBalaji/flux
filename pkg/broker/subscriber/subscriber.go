@@ -13,6 +13,7 @@ import (
 	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/message"
 	"github.com/NamanBalaji/flux/pkg/queue"
+	"github.com/NamanBalaji/flux/pkg/request"
 )
 
 type Subscriber struct {
@@ -85,7 +86,7 @@ func (s *Subscriber) HandleQueue(ctx context.Context, cfg config.Config, topicNa
 }
 
 func (s *Subscriber) pushMessage(ctx context.Context, cfg config.Config, msg *message.Message, topicName string) error {
-	res := MessageResponse{
+	res := request.PollMessage{
 		Id:      msg.Id,
 		Payload: msg.Payload,
 		Topic:   topicName,

@@ -12,6 +12,7 @@ import (
 	"github.com/NamanBalaji/flux/internal/broker/service"
 	"github.com/NamanBalaji/flux/pkg/config"
 	"github.com/NamanBalaji/flux/pkg/message"
+	"github.com/NamanBalaji/flux/pkg/request"
 )
 
 func PublishMessageHandler(cfg config.Config, broker *service.Broker) gin.HandlerFunc {
@@ -24,7 +25,7 @@ func PublishMessageHandler(cfg config.Config, broker *service.Broker) gin.Handle
 			return
 		}
 
-		var body PublishMessageRequest
+		var body request.PublishMessageRequest
 		err = json.Unmarshal(jsonData, &body)
 		if err != nil {
 			log.Printf("invalid body format [ERROR]: %s", err)
@@ -58,7 +59,7 @@ func RegisterSubscriberHandler(cfg config.Config, broker *service.Broker) gin.Ha
 			return
 		}
 
-		var body RegisterSubscriberRequest
+		var body request.RegisterSubscriberRequest
 		err = json.Unmarshal(jsonData, &body)
 		if err != nil {
 			log.Printf("invalid body format [ERROR]: %s", err)
@@ -89,7 +90,7 @@ func UnsubscribeHandler(broker *service.Broker) gin.HandlerFunc {
 			return
 		}
 
-		var body UnsubscribeRequest
+		var body request.UnsubscribeRequest
 		err = json.Unmarshal(jsonData, &body)
 		if err != nil {
 			log.Printf("invalid body format [ERROR]: %s", err)
