@@ -1,34 +1,32 @@
-# flux
-Flux is a high-performance distributed event streaming platform offering scalable topic-based messaging, guaranteed message ordering, and at-least-once delivery.
+# Flux
+Flux is a high-performance in memory event streaming platform offering scalable topic-based messaging, guaranteed message ordering, and at-least-once delivery.
 
-## Todo
-- [ ] state dump
-- [ ] add subscriber package
-- [ ] add producer package
-- [ ] integrate with raft
-- [ ] add unit tests
-- [ ] add docker file
+## Features
+
+- Topic based messaging
+- In Memory storage
+- Message ordering 
+- At least once delivery 
+- Message deduplication
+- Periodic state cleanup
 
 ## Design
 
 ### Producers
 
-#### Leader Election and Message Routing:
-
-- Producers send messages to a leader, the leader is determined through the Raft consensus algorithm among brokers. Each broker group runs its own Raft consensus to elect a leader within the group.
-- Producers can send a message to any broker. If the broker is not the leader, it redirects the producer to the current leader of the group.
+- Producers send messages to the broker. 
 
 #### Message Duplication and Ordering:
 
 - Messages are structured like <message, topic, uuid>.
-- Each message produced by producers is associated with a unique id decided by producer (uuid), which is used to prevent duplication: producers can retry sending a same message if they do not hear a response for some while and the receivers remember each message received with the uuid, and if duplicate messages are received, simple acknowledge it without appending it to its log.
+- Each message produced by producers is associated with a unique id decided by producer (uuid), which is used to prevent duplication: producers can retry sending a same message if ther's an error or request timeout.
 
 ### Consumers
 
 #### Push Model and Subscription Semantics:
 
-- Consumers can subscribe to some topics and get the messages related to the topics. We plan to use the push model for consumers, namely, brokers push messages to consumers instead of consumers poll from brokers. The push model is better for our project because all the messages are in-memory, and the broker should deliver and purge the messages as soon as possible to save memory space.
-- We plan to first develop a one-to-all semantics for consumers: a message will be sent to all consumers (e.g. a chat room application), we can add a one-to-one semantics (a message is sent to any and only one consumer who subscribed to the topic) later if time allows.
+- Consumers can subscribe to some topics and get the messages related to the topics. We plan to use the push model for consumers, brokers push messages to consumers instead of consumers poll from brokers. The push model is better for our project because all the messages are in-memory, and the broker should deliver and purge the messages as soon as possible to save memory space.
+- While subscribing consumers can send `readOld` flag which allows the consumer to read all the old messages that the broker stills has in memory before reading the new ones.
 
 #### Consumer Registration and Message Delivery:
 
@@ -36,26 +34,21 @@ Flux is a high-performance distributed event streaming platform offering scalabl
 - New consumers can choose to receive only new messages or all the old messages that the broker has in it's record 
 - We provide a semantics that the consumer receives the messages of a topic in a strictly identical order as in the brokers. So the broker will advance the offset only when a consumer acknowledges a message.
 
-### Brokers and Raft
+### Brokers
 
-Brokers store and manage messages from producer, replicate messages to other broker servers and push messages to consumers.
+Brokers store and manage messages from producer and push messages to consumers. Brokers maintain a request channel to process the publishing requests in order.
 
-#### In-Memory Storage and Replication:
+#### In-Memory Storage:
 
-- Brokers store messages in-memory. The Raft protocol ensures that all messages are replicated across the broker group before being acknowledged to the producer.
-- Each broker group runs an instance of the Raft consensus algorithm, with one leader and multiple followers at any given time.
+- Brokers store messages in-memory. A thread safe queue data structure is used to store the messages.
+- Brokers periodically clean up inactive subscribers and all the messages that have been ACKed.
 
-#### Raft for Leader Election and Failover:
+#### Subscriber and Message Management:
 
-- Brokers within a group use Raft to elect a leader and to manage leader failover transparently.
-- Leaders are responsible for replicating the log (messages) to followers and for pushing messages to consumers.
+- Consumers are set to inactive if they unsubscribe, or they fail ack when the broker pushes a message
+- Subscribers are deleted from the memory if they have inactive status and they are last activity was recorded more than their ttl 
+- Messages are only deleted if they are delivered to all the subscribed consumers and if their ttl is expired
 
-#### Consumer Offsets and Message Purging:
-
-- The leader broker manages consumer offsets and periodically commits this information to the replicated log to ensure it's consistent across followers.
-- Messages are purged from the broker storage only when all consumers for a topic have acknowledged receipt, ensuring no loss of messages on consumer failure.
-
-#### Raft Cluster Information
-
-- Broker Groups as Raft Clusters: Each broker group functions as a separate Raft cluster, managing its own leader election and log replication.
-- Replication and Consensus: Raft ensures that all changes (message arrivals, consumer offsets) are replicated across all brokers in a group before being committed.
+## TODOs
+- [ ] Add unit tests 
+- [ ] Add benchmarks
