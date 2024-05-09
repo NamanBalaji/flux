@@ -27,6 +27,7 @@ func main() {
 	}
 
 	broker := service.NewBroker()
+	go broker.StartRequestPrecessing(*cfg)
 
 	apiRouter := api.SetupRouter(*cfg, broker)
 

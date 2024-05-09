@@ -43,15 +43,6 @@ func CreateTopic(name string, bufferSize int) *Topic {
 }
 
 func (t *Topic) AddMessage(msg *message.Message) bool {
-	t.lock.Lock()
-	if _, ok := t.MessageSet[msg.Id]; ok {
-		log.Printf("Topic %s already has a message with id %s \n", t.Name, msg.Id)
-		t.lock.Unlock()
-
-		return true
-	}
-	t.lock.Unlock()
-
 	select {
 	case t.MessageChan <- msg:
 		t.lock.Lock()
@@ -71,6 +62,20 @@ func (t *Topic) ManageTopic() {
 	for msg := range t.MessageChan {
 		t.deliverMessageToSubscribers(msg)
 	}
+}
+
+func (t *Topic) ShouldEnqueue(msg *message.Message) bool {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	if _, ok := t.MessageSet[msg.Id]; ok {
+		log.Printf("Topic %s already has a message with id %s \n", t.Name, msg.Id)
+		t.lock.Unlock()
+
+		return false
+	}
+
+	return true
 }
 
 func (t *Topic) deliverMessageToSubscribers(msg *message.Message) {
@@ -201,7 +206,6 @@ func (t *Topic) CleanupMessages(cfg config.Config) {
 	for i := 0; i < totalMessages; i++ {
 		if t.MessageQueue.GetAt(i).SafeToDelete(cfg) {
 			msg := t.MessageQueue.DeleteAtIndex(i)
-			delete(t.MessageSet, msg.Id)
 
 			log.Printf("Message with id %s has been deleted from the topic %s \n", msg.Id, t.Name)
 		}

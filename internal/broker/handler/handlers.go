@@ -35,17 +35,15 @@ func PublishMessageHandler(cfg config.Config, broker *service.Broker) gin.Handle
 
 		msg := message.NewMessage(body.Id, body.Message)
 
-		processed := broker.PublishMessage(cfg, body.Topic, msg)
-
-		if !processed {
-			log.Print("error occurred while writing the message to the topic [ERROR]: server too busy")
-			c.JSON(http.StatusInternalServerError, fmt.Errorf("error occurred while writing the message to the topic [ERROR]: server too busy"))
-
-			return
+		transformedRequest := service.PublishRequest{
+			Topic:   body.Topic,
+			Message: msg,
 		}
 
+		broker.EnqueueRequest(transformedRequest)
+
 		c.JSON(http.StatusOK, gin.H{
-			"message": fmt.Sprintf("message published to topic %s", body.Topic),
+			"message": fmt.Sprintf("message enqued for processing %s", body.Topic),
 		})
 	}
 }

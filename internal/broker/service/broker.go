@@ -12,18 +12,36 @@ import (
 )
 
 type Broker struct {
-	mu     sync.Mutex
-	Topics topicPkg.Topics
-	// other brokers
+	mu          sync.Mutex
+	Topics      topicPkg.Topics
+	RequestChan chan PublishRequest
+}
+
+type PublishRequest struct {
+	Topic   string
+	Message *message.Message
 }
 
 func NewBroker() *Broker {
 	return &Broker{
-		Topics: topicPkg.CreateTopics(),
+		Topics:      topicPkg.CreateTopics(),
+		RequestChan: make(chan PublishRequest, 100),
 	}
 }
 
-func (b *Broker) PublishMessage(cfg config.Config, topicName string, msg *message.Message) bool {
+func (b *Broker) StartRequestPrecessing(cfg config.Config) {
+	go func() {
+		for req := range b.RequestChan {
+			b.publishMessage(cfg, req.Topic, req.Message)
+		}
+	}()
+}
+
+func (b *Broker) EnqueueRequest(req PublishRequest) {
+	b.RequestChan <- req
+}
+
+func (b *Broker) publishMessage(cfg config.Config, topicName string, msg *message.Message) {
 	log.Printf("Trying to publish message with id: %s \n", msg.Id)
 	b.mu.Lock()
 
@@ -36,7 +54,9 @@ func (b *Broker) PublishMessage(cfg config.Config, topicName string, msg *messag
 	}
 	defer b.mu.Unlock()
 
-	return topic.AddMessage(msg)
+	if topic.ShouldEnqueue(msg) {
+		topic.AddMessage(msg)
+	}
 }
 
 func (b *Broker) ValidateTopics(topics []string) error {
