@@ -42,20 +42,14 @@ func CreateTopic(name string, bufferSize int) *Topic {
 	return topic
 }
 
-func (t *Topic) AddMessage(msg *message.Message) bool {
-	select {
-	case t.MessageChan <- msg:
-		t.lock.Lock()
-		t.MessageSet[msg.Id] = struct{}{}
-		t.MessageQueue.Enqueue(msg)
-		t.lock.Unlock()
+func (t *Topic) AddMessage(msg *message.Message) {
+	t.MessageChan <- msg
+	t.lock.Lock()
+	t.MessageSet[msg.Id] = struct{}{}
+	t.MessageQueue.Enqueue(msg)
+	t.lock.Unlock()
 
-		log.Printf("Published message with id %s to topic: %s \n", msg.Id, t.Name)
-		return true
-	default:
-		log.Printf("Could not publish message with id %s to topic %s as topic channel is full\n", msg.Id, t.Name)
-		return false
-	}
+	log.Printf("Published message with id %s to topic: %s \n", msg.Id, t.Name)
 }
 
 func (t *Topic) ManageTopic() {
@@ -161,7 +155,7 @@ func (t *Topic) Unsubscribe(addr string) error {
 		}
 	}
 
-	return errors.New("no such topic: " + t.Name)
+	return errors.New("no such subscriber subscribed to topic: " + t.Name)
 }
 
 func (t *Topic) CleanupSubscribers(cfg config.Config) {

@@ -104,15 +104,13 @@ func TestConcurrentAddRemoveSubscribersIndependent(t *testing.T) {
 
 func TestSafeToDelete(t *testing.T) {
 	msg := NewMessage("msg1", "test payload")
+	msg.AddedAt = time.Now().Add(-time.Hour)
 	msg.AddSubscriber("sub1")
 	msg.Ack("sub1")
 
 	cfg := config.Config{
 		Message: config.Message{TTL: 1},
 	}
-
-	// Simulate passage of time beyond TTL
-	time.Sleep(2 * time.Second)
 
 	if !msg.SafeToDelete(cfg) {
 		t.Errorf("SafeToDelete incorrectly returned false")
@@ -140,8 +138,6 @@ func TestNotSafeToDelete_MessageNotExpired(t *testing.T) {
 	cfg := config.Config{
 		Message: config.Message{TTL: 40},
 	}
-
-	time.Sleep(2 * time.Second)
 
 	if msg.SafeToDelete(cfg) {
 		t.Errorf("SafeToDelete incorrectly returned true for undelivered message")
