@@ -23,7 +23,6 @@ type Subscriber struct {
 }
 
 func NewSubscriber(host string, port int, brokerAddr string) *Subscriber {
-
 	sub := &Subscriber{
 		host:          host,
 		port:          port,

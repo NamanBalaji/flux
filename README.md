@@ -14,6 +14,21 @@ Flux is a high-performance in memory event streaming platform offering scalable 
 - Message deduplication
 - Periodic state cleanup
 
+## Config 
+- api:
+  - port: port which the broker runs on 
+- topic:
+  - buffer: topic channel buffer
+- message:
+  - ttl: message ttl in seconds
+  - cleanup_time: schedule message cleanup goroutine, time in seconds
+- subscriber:
+  - retry_count: retry count for publishing message
+  - retry_interval: time between each retry in seconds
+  - cleanup_time: schedule subscriber cleanup goroutine, time in seconds
+  - timeout: message push request time out
+  - inactive_time: allowed inactive time for the subscriber, will be delete if inactive for more than this time
+
 ## Design
 
 ### Producers
@@ -53,6 +68,6 @@ Brokers store and manage messages from producer and push messages to consumers. 
 - Subscribers are deleted from the memory if they have inactive status and they are last activity was recorded more than their ttl 
 - Messages are only deleted if they are delivered to all the subscribed consumers and if their ttl is expired
 
-## TODOs
-- [ ] Add unit tests 
-- [ ] Add benchmarks
+## Future 
+- Add benchmarks
+- Make broker distributed
